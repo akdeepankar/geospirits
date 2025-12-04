@@ -1,0 +1,202 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0a;
+  padding: 1rem;
+  position: relative;
+}
+
+.container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 50%, rgba(120, 0, 255, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(255, 0, 100, 0.03) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.backButton {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  padding: 0.5rem 1rem;
+  background: rgba(20, 20, 20, 0.6);
+  backdrop-filter: blur(10px);
+  color: #555;
+  text-decoration: none;
+  font-weight: 200;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.25rem;
+  letter-spacing: 0.1em;
+  text-transform: lowercase;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 1000;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.backButton:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.formCard {
+  background: rgba(20, 20, 20, 0.6);
+  backdrop-filter: blur(10px);
+  border-radius: 0.25rem;
+  padding: 3rem 2rem;
+  width: 100%;
+  max-width: 400px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  position: relative;
+  z-index: 1;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.appName {
+  font-size: 1.5rem;
+  font-weight: 200;
+  color: #ffffff;
+  letter-spacing: 0.1em;
+  text-transform: lowercase;
+  margin: 0 0 1rem 0;
+}
+
+.title {
+  font-size: 1.125rem;
+  font-weight: 200;
+  color: #666;
+  letter-spacing: 0.1em;
+  text-transform: lowercase;
+  margin: 0;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.label {
+  font-size: 0.75rem;
+  font-weight: 200;
+  color: #888;
+  letter-spacing: 0.05em;
+  text-transform: lowercase;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.input {
+  padding: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  font-weight: 200;
+  transition: all 0.3s ease;
+}
+
+.input::placeholder {
+  color: #555;
+}
+
+.input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.button {
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 200;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.05em;
+  text-transform: lowercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+.button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.toggleButton {
+  margin-top: 1.5rem;
+  padding: 0.5rem;
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 0.75rem;
+  font-weight: 200;
+  cursor: pointer;
+  text-align: center;
+  transition: color 0.3s ease;
+  letter-spacing: 0.05em;
+  text-transform: lowercase;
+  width: 100%;
+}
+
+.toggleButton:hover {
+  color: #888;
+}
+
+.message {
+  padding: 0.75rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 200;
+  letter-spacing: 0.05em;
+  text-transform: lowercase;
+}
+
+.message.error {
+  background-color: rgba(255, 0, 0, 0.1);
+  color: #ff4444;
+  border: 1px solid rgba(255, 0, 0, 0.2);
+}
+
+.message.success {
+  background-color: rgba(0, 255, 0, 0.05);
+  color: #88ff88;
+  border: 1px solid rgba(0, 255, 0, 0.2);
+}

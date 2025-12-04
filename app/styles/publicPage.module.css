@@ -1,0 +1,220 @@
+.container {
+  min-height: 100vh;
+  padding: 0;
+}
+
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: linear-gradient(135deg, rgba(10, 10, 15, 0.95) 0%, rgba(20, 5, 25, 0.95) 100%);
+  backdrop-filter: blur(25px) saturate(180%);
+  border-bottom: 1px solid var(--theme-color-medium, rgba(139, 0, 139, 0.4));
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.6),
+    0 0 60px var(--theme-color-light, rgba(139, 0, 139, 0.15)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  padding: 1.25rem 3rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  animation: navbarGlow 4s ease-in-out infinite;
+}
+
+@keyframes navbarGlow {
+  0%, 100% {
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.6),
+      0 0 60px var(--theme-color-light, rgba(139, 0, 139, 0.15)),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+  50% {
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.6),
+      0 0 80px var(--theme-color-medium, rgba(139, 0, 139, 0.25)),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+}
+
+.navLeft {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.siteInfo {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  position: relative;
+  padding-left: 1rem;
+}
+
+.siteInfo::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 60%;
+  background: linear-gradient(180deg, var(--theme-color-dark, rgba(139, 0, 139, 0.8)) 0%, var(--theme-color-light, rgba(139, 0, 139, 0.2)) 100%);
+  border-radius: 2px;
+  box-shadow: 0 0 10px var(--theme-color-medium, rgba(139, 0, 139, 0.6));
+}
+
+.siteName {
+  font-size: 1.5rem;
+  font-weight: 200;
+  color: rgba(255, 255, 255, 0.98);
+  text-transform: lowercase;
+  letter-spacing: 1px;
+  text-shadow: 
+    0 0 30px var(--theme-color-dark, rgba(139, 0, 139, 0.8)),
+    0 0 60px var(--theme-color-medium, rgba(139, 0, 139, 0.4)),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.creatorName {
+  font-size: 0.9rem;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.95);
+  text-transform: lowercase;
+  letter-spacing: 0.5px;
+  font-style: normal;
+}
+
+.homeButton {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 1.5rem;
+  background: linear-gradient(135deg, var(--theme-color-light, rgba(139, 0, 139, 0.2)) 0%, var(--theme-color-light, rgba(75, 0, 130, 0.2)) 100%);
+  border: 1px solid var(--theme-color, rgba(139, 0, 139, 0.5));
+  color: rgba(255, 255, 255, 0.95);
+  text-decoration: none;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 300;
+  text-transform: lowercase;
+  letter-spacing: 0.5px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 0 20px var(--theme-color-light, rgba(139, 0, 139, 0.3)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.homeButton::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.5s;
+}
+
+.homeButton:hover::before {
+  left: 100%;
+}
+
+.homeButton:hover {
+  background: linear-gradient(135deg, var(--theme-color-medium, rgba(139, 0, 139, 0.35)) 0%, var(--theme-color-medium, rgba(75, 0, 130, 0.35)) 100%);
+  border-color: var(--theme-color-dark, rgba(139, 0, 139, 0.8));
+  box-shadow: 
+    0 0 35px var(--theme-color-medium, rgba(139, 0, 139, 0.6)),
+    0 4px 15px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.homeButton:active {
+  transform: translateY(0);
+}
+
+.header {
+  max-width: 1200px;
+  margin: 0 auto 2rem;
+  padding: 2rem 2rem 1rem;
+}
+
+.pageTitle {
+  font-size: 2.5rem;
+  font-weight: 300;
+  margin: 0;
+  text-transform: lowercase;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 0 30px var(--theme-color, rgba(139, 0, 139, 0.5));
+}
+
+.content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem 2rem;
+}
+
+.component {
+  margin-bottom: 1rem;
+}
+
+/* Confetti animation */
+.confetti {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  top: -10px;
+  z-index: 9999;
+  animation: fall linear forwards;
+}
+
+@keyframes fall {
+  to {
+    transform: translateY(100vh) rotate(360deg);
+  }
+}
+
+/* Spooky emoji animation */
+.spookyEmoji {
+  position: fixed;
+  top: -50px;
+  z-index: 9999;
+  animation: emojifall linear forwards;
+  pointer-events: none;
+}
+
+@keyframes emojifall {
+  to {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+/* Spooky pulse animation */
+@keyframes spookyPulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(255, 107, 0, 0.5), inset 0 0 20px rgba(139, 0, 139, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 107, 0, 0.8), inset 0 0 30px rgba(139, 0, 139, 0.5);
+  }
+}
+
+.headerImage {
+  width: 100%;
+  max-height: 400px;
+  overflow: hidden;
+  margin-bottom: 0;
+  position: relative;
+}
+
+.headerImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: brightness(0.8);
+}

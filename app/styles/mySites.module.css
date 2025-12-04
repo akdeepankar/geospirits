@@ -1,0 +1,501 @@
+.container {
+  min-height: 100vh;
+  background: #0a0a0a;
+  padding: 2rem;
+  position: relative;
+}
+
+.container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 50%, rgba(120, 0, 255, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(255, 0, 100, 0.03) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.header {
+  max-width: 1200px;
+  margin: 0 auto 3rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  position: relative;
+  z-index: 1;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 200;
+  color: #666;
+  margin: 0;
+  letter-spacing: 0.1em;
+  text-transform: lowercase;
+}
+
+.headerButtons {
+  display: flex;
+  gap: 2rem;
+}
+
+.homeButton {
+  padding: 0;
+  background: none;
+  color: #555;
+  text-decoration: none;
+  font-weight: 200;
+  transition: color 0.3s ease;
+  border: none;
+  letter-spacing: 0.1em;
+  text-transform: lowercase;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.homeButton:hover {
+  color: #fff;
+}
+
+.createButton {
+  padding: 0;
+  background: none;
+  color: #888;
+  text-decoration: none;
+  font-weight: 200;
+  transition: color 0.3s ease;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  letter-spacing: 0.1em;
+  text-transform: lowercase;
+  font-size: 0.875rem;
+}
+
+.createButton:hover {
+  color: #fff;
+}
+
+.emptyState {
+  max-width: 500px;
+  margin: 8rem auto;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.emptyTitle {
+  font-size: 1.25rem;
+  font-weight: 200;
+  color: #555;
+  margin: 0 0 2rem 0;
+  letter-spacing: 0.1em;
+  text-transform: lowercase;
+}
+
+.grid {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 2rem;
+  position: relative;
+  z-index: 1;
+}
+
+.card {
+  background: rgba(20, 20, 20, 0.4);
+  backdrop-filter: blur(10px);
+  border-radius: 0.25rem;
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  transform: translateY(-2px);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cardTitle {
+  font-size: 1.125rem;
+  font-weight: 200;
+  color: #fff;
+  margin: 0 0 0.5rem 0;
+  letter-spacing: 0.05em;
+}
+
+.cardDate {
+  font-size: 0.875rem;
+  color: #555;
+  white-space: nowrap;
+  margin-left: 1rem;
+  font-weight: 300;
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.infoRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.infoLabel {
+  font-size: 0.875rem;
+  font-weight: 300;
+  color: #666;
+  letter-spacing: 0.05em;
+}
+
+.infoValue {
+  font-size: 0.875rem;
+  color: #999;
+  font-weight: 300;
+}
+
+.urlBox {
+  display: flex;
+  align-items: center;
+}
+
+.urlLink {
+  font-size: 0.875rem;
+  color: #888;
+  text-decoration: none;
+  word-break: break-all;
+  transition: color 0.3s ease;
+}
+
+.urlLink:hover {
+  color: #fff;
+  text-decoration: none;
+}
+
+.cardFooter {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto auto;
+  gap: 0.5rem;
+}
+
+.viewButton {
+  flex: 1;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  text-decoration: none;
+  border-radius: 0.25rem;
+  font-weight: 300;
+  text-align: center;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  letter-spacing: 0.05em;
+}
+
+.viewButton:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.copyButton {
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  color: #888;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 0.25rem;
+  font-weight: 300;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  letter-spacing: 0.05em;
+}
+
+.copyButton:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.cardImage {
+  width: 100%;
+  height: 180px;
+  overflow: hidden;
+  position: relative;
+  margin: -1.5rem -1.5rem 0 -1.5rem;
+  border-radius: 0.25rem 0.25rem 0 0;
+}
+
+.cardImage::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, transparent 0%, rgba(10, 10, 10, 0.9) 100%);
+  pointer-events: none;
+}
+
+.cardImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.6s ease, filter 0.3s ease;
+  filter: grayscale(0.2) brightness(1.1);
+}
+
+.card:hover .cardImg {
+  transform: scale(1.02);
+  filter: grayscale(0) brightness(1.2);
+}
+
+.deleteButton {
+  padding: 0;
+  background: none;
+  color: #ff4444;
+  border: none;
+  font-weight: 200;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.1em;
+  text-transform: lowercase;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.deleteButton:hover:not(:disabled) {
+  color: #ff6666;
+  text-shadow: 0 0 10px rgba(255, 68, 68, 0.3);
+}
+
+.deleteButton:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  background: rgba(10, 10, 10, 0.98);
+  backdrop-filter: blur(20px);
+  border-radius: 0;
+  padding: 3rem;
+  max-width: 400px;
+  width: 90%;
+  border: 1px solid rgba(255, 0, 0, 0.1);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modalTitle {
+  font-size: 1.25rem;
+  font-weight: 200;
+  color: #ff4444;
+  margin: 0 0 1rem 0;
+  letter-spacing: 0.1em;
+  text-transform: lowercase;
+}
+
+.modalText {
+  color: #555;
+  margin: 0 0 2rem 0;
+  line-height: 1.6;
+  font-weight: 200;
+  font-size: 0.875rem;
+  letter-spacing: 0.05em;
+  text-transform: lowercase;
+}
+
+.modalButtons {
+  display: flex;
+  gap: 2rem;
+  justify-content: flex-end;
+}
+
+.cancelButton {
+  padding: 0;
+  background: none;
+  color: #555;
+  border: none;
+  font-weight: 200;
+  cursor: pointer;
+  transition: color 0.3s ease;
+  letter-spacing: 0.1em;
+  text-transform: lowercase;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cancelButton:hover:not(:disabled) {
+  color: #fff;
+}
+
+.cancelButton:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.confirmDeleteButton {
+  padding: 0;
+  background: none;
+  color: #ff4444;
+  border: none;
+  font-weight: 200;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.1em;
+  text-transform: lowercase;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.confirmDeleteButton:hover:not(:disabled) {
+  color: #ff6666;
+  text-shadow: 0 0 10px rgba(255, 68, 68, 0.3);
+}
+
+.confirmDeleteButton:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.editButton {
+  flex: 1;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: #888;
+  text-decoration: none;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 300;
+  text-align: center;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  letter-spacing: 0.05em;
+}
+
+.editButton:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.cardContent {
+  padding: 1.5rem 0 0 0;
+}
+
+.cardLocation {
+  font-size: 0.75rem;
+  color: #555;
+  margin: 0 0 0.75rem 0;
+  font-weight: 200;
+  letter-spacing: 0.1em;
+  text-transform: lowercase;
+}
+
+.cardUrl {
+  font-size: 0.75rem;
+  color: #444;
+  text-decoration: none;
+  word-break: break-all;
+  transition: color 0.3s ease;
+  font-weight: 200;
+  letter-spacing: 0.05em;
+  display: block;
+}
+
+.cardUrl:hover {
+  color: #888;
+}
+
+.cardActions {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.actionButton {
+  padding: 0;
+  background: none;
+  color: #555;
+  text-decoration: none;
+  border: none;
+  font-weight: 200;
+  cursor: pointer;
+  transition: color 0.3s ease;
+  letter-spacing: 0.1em;
+  text-transform: lowercase;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.actionButton:hover {
+  color: #fff;
+}
