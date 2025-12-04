@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getPageForEdit } from '../actions/pages';
 import PageBuilder from '../components/PageBuilder';
 
-export default function CreatePage() {
+function CreatePageContent() {
   const searchParams = useSearchParams();
   const editId = searchParams.get('edit');
   const [pageData, setPageData] = useState<any>(null);
@@ -41,5 +41,20 @@ export default function CreatePage() {
     <div className="h-screen">
       <PageBuilder editMode={!!editId} initialData={pageData} />
     </div>
+  );
+}
+
+export default function CreatePage() {
+  return (
+    <Suspense fallback={
+      <div className="h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-xl font-bold mb-2">Loading...</div>
+          <div className="text-gray-600">Please wait</div>
+        </div>
+      </div>
+    }>
+      <CreatePageContent />
+    </Suspense>
   );
 }
