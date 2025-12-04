@@ -3,6 +3,7 @@
   background: #0a0a0a;
   padding: 2rem;
   position: relative;
+  overflow-y: auto;
 }
 
 .container::before {
@@ -110,6 +111,7 @@
   gap: 2rem;
   position: relative;
   z-index: 1;
+  padding-bottom: 2rem;
 }
 
 .card {
