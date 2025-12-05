@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { PageComponent, DraggableItem, ComponentStyle, ButtonAction } from '../types/pageBuilder';
 import { publishPage, updatePage } from '../actions/pages';
 import LocationPicker from './LocationPicker';
+import { GenerationConfig, buildSystemPrompt, enhanceUserPrompt, parseAIResponse, validatePrompt } from '../utils/prompt-engineering';
+import { makeOpenAIRequest, getStoredApiKey, storeApiKey, hasStoredApiKey, estimateTokens, estimateCost, formatCost, getPricingUrl, OpenAIRequest, OpenAIError, getErrorGuidance } from '../utils/openai-client';
 import styles from '../styles/pageBuilder.module.css';
 import { 
   Type, 
@@ -23,7 +25,10 @@ import {
   X,
   Plus,
   ArrowLeft,
-  MessageCircle
+  MessageCircle,
+  Sparkles,
+  Send,
+  Loader2
 } from 'lucide-react';
 
 const SPOOKY_EMOJIS = ['🎃', '👻', '🦇', '🕷️', '🕸️', '💀', '🧛', '🧟', '🧙', '🍬', '🍭', '🌙', '⚰️', '🔮', '🕯️'];
@@ -89,6 +94,46 @@ export default function PageBuilder({ editMode = false, initialData }: PageBuild
   const [chatbotButtonEmoji, setChatbotButtonEmoji] = useState('');
   const [chatbotButtonType, setChatbotButtonType] = useState<'emoji' | 'image'>('emoji');
   const [themeColor, setThemeColor] = useState('#8b008b');
+  
+  // AI Mode state
+  const [aiModeActive, setAiModeActive] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationStatus, setGenerationStatus] = useState<{
+    type: 'idle' | 'success' | 'error';
+    message?: string;
+    tokensUsed?: number;
+    errorType?: OpenAIError['type'];
+    retryable?: boolean;
+    guidance?: string;
+  }>({ type: 'idle' });
+  const [showConfigPanel, setShowConfigPanel] = useState(false);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [generatedComponentIds, setGeneratedComponentIds] = useState<string[]>([]);
+  const [generationConfig, setGenerationConfig] = useState<GenerationConfig>({
+    tone: 'professional',
+    preferredComponents: [],
+    themePreference: 'auto',
+    maxComponents: 8,
+    includeImages: true,
+    includeButtons: true,
+  });
+  const [retryCount, setRetryCount] = useState(0);
+  const [rateLimitCooldown, setRateLimitCooldown] = useState(0);
+  const [sessionTokens, setSessionTokens] = useState<{
+    total: number;
+    prompt: number;
+    completion: number;
+    estimatedCost: number;
+  }>({
+    total: 0,
+    prompt: 0,
+    completion: 0,
+    estimatedCost: 0,
+  });
+  const [lastSuccessfulPrompt, setLastSuccessfulPrompt] = useState<string>('');
+  const [isRefinement, setIsRefinement] = useState(false);
 
   // Load initial data in edit mode
   useEffect(() => {
@@ -115,6 +160,34 @@ export default function PageBuilder({ editMode = false, initialData }: PageBuild
       setSlugManuallyEdited(true); // In edit mode, consider slug as manually set
     }
   }, [editMode, initialData]);
+
+  // Load generation config from sessionStorage on mount
+  useEffect(() => {
+    const savedConfig = sessionStorage.getItem('aiGenerationConfig');
+    if (savedConfig) {
+      try {
+        const parsed = JSON.parse(savedConfig);
+        setGenerationConfig(parsed);
+      } catch (error) {
+        console.error('Failed to parse saved config:', error);
+      }
+    }
+  }, []);
+
+  // Persist generation config to sessionStorage when it changes
+  useEffect(() => {
+    sessionStorage.setItem('aiGenerationConfig', JSON.stringify(generationConfig));
+  }, [generationConfig]);
+
+  // Handle rate limit cooldown
+  useEffect(() => {
+    if (rateLimitCooldown > 0) {
+      const timer = setTimeout(() => {
+        setRateLimitCooldown(rateLimitCooldown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [rateLimitCooldown]);
 
   // Auto-generate slug from site name
   const generateSlugFromName = (name: string): string => {
@@ -512,6 +585,219 @@ export default function PageBuilder({ editMode = false, initialData }: PageBuild
     setDraggedIndex(null);
   };
 
+  // AI Generation Functions
+  const handleGenerateComponents = async (isRetry: boolean = false, isRegenerate: boolean = false) => {
+    // Validate prompt
+    if (!validatePrompt(aiPrompt)) {
+      setGenerationStatus({
+        type: 'error',
+        message: 'Please enter a description of your desired page.',
+        retryable: false,
+      });
+      return;
+    }
+
+    // Check for API key
+    const apiKey = getStoredApiKey();
+    if (!apiKey || !hasStoredApiKey()) {
+      setShowApiKeyModal(true);
+      return;
+    }
+
+    // Check rate limit cooldown
+    if (rateLimitCooldown > 0) {
+      setGenerationStatus({
+        type: 'error',
+        message: `Rate limit active. Please wait ${rateLimitCooldown} seconds before trying again.`,
+        retryable: false,
+      });
+      return;
+    }
+
+    // Start generation
+    setIsGenerating(true);
+    setGenerationStatus({ type: 'idle' });
+
+    // Increment retry count if this is a retry
+    if (isRetry) {
+      setRetryCount(retryCount + 1);
+    } else {
+      setRetryCount(0);
+    }
+
+    try {
+      // Build prompts
+      const systemPrompt = buildSystemPrompt();
+      
+      // For refinement, include context about existing AI-generated components
+      let promptToUse = aiPrompt;
+      if (isRefinement && generatedComponentIds.length > 0) {
+        const aiComponents = components.filter(c => generatedComponentIds.includes(c.id));
+        const componentSummary = aiComponents.map(c => `${c.type}: ${c.content?.substring(0, 50) || 'N/A'}`).join(', ');
+        promptToUse = `Current AI-generated components: ${componentSummary}\n\nRefinement request: ${aiPrompt}`;
+      }
+      
+      const enhancedPrompt = enhanceUserPrompt(promptToUse, generationConfig, components);
+
+      // Prepare OpenAI request
+      const request: OpenAIRequest = {
+        model: 'gpt-4-turbo',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: enhancedPrompt },
+        ],
+        temperature: 0.7,
+        response_format: { type: 'json_object' },
+      };
+
+      // Make API call
+      const { response, error } = await makeOpenAIRequest(request, apiKey);
+
+      if (error) {
+        // Handle specific error types
+        if (error.type === 'invalid_key') {
+          // Clear stored key and show modal
+          setShowApiKeyModal(true);
+        } else if (error.type === 'rate_limit') {
+          // Start 60 second cooldown
+          setRateLimitCooldown(60);
+        }
+
+        setGenerationStatus({
+          type: 'error',
+          message: error.message,
+          errorType: error.type,
+          retryable: error.retryable,
+          guidance: getErrorGuidance(error.type),
+        });
+        setIsGenerating(false);
+        return;
+      }
+
+      if (!response || !response.choices || !response.choices[0]) {
+        setGenerationStatus({
+          type: 'error',
+          message: 'Received invalid response from AI. Please try again.',
+          errorType: 'invalid_response',
+          retryable: true,
+          guidance: getErrorGuidance('invalid_response'),
+        });
+        setIsGenerating(false);
+        return;
+      }
+
+      // Parse response into components
+      const generatedComponents = parseAIResponse(response.choices[0].message.content);
+
+      if (generatedComponents.length === 0) {
+        setGenerationStatus({
+          type: 'error',
+          message: 'No components could be generated. Please try a more specific prompt.',
+          retryable: true,
+          guidance: 'Try being more specific about what components you want (e.g., "Add a heading, paragraph, and button").',
+        });
+        setIsGenerating(false);
+        return;
+      }
+
+      // If regenerating or refining, remove old AI-generated components and preserve manual ones
+      if (isRegenerate || isRefinement) {
+        const manualComponents = components.filter(c => !generatedComponentIds.includes(c.id));
+        const newComponentIds = generatedComponents.map(comp => comp.id);
+        setComponents([...manualComponents, ...generatedComponents]);
+        setGeneratedComponentIds(newComponentIds);
+      } else {
+        // Add generated components to page
+        const newComponentIds = generatedComponents.map(comp => comp.id);
+        setComponents([...components, ...generatedComponents]);
+        setGeneratedComponentIds([...generatedComponentIds, ...newComponentIds]);
+      }
+
+      // Calculate cost for this generation
+      const generationCost = estimateCost(
+        'gpt-4-turbo',
+        response.usage.prompt_tokens,
+        response.usage.completion_tokens
+      );
+
+      // Update session token tracking
+      setSessionTokens(prev => ({
+        total: prev.total + response.usage.total_tokens,
+        prompt: prev.prompt + response.usage.prompt_tokens,
+        completion: prev.completion + response.usage.completion_tokens,
+        estimatedCost: prev.estimatedCost + generationCost,
+      }));
+
+      // Show success message
+      const actionText = isRegenerate ? 'regenerated' : isRefinement ? 'refined' : 'generated';
+      setGenerationStatus({
+        type: 'success',
+        message: `Successfully ${actionText} ${generatedComponents.length} component${generatedComponents.length > 1 ? 's' : ''}!`,
+        tokensUsed: response.usage.total_tokens,
+      });
+
+      // Save the successful prompt for regeneration
+      if (!isRegenerate && !isRefinement) {
+        setLastSuccessfulPrompt(aiPrompt);
+      }
+
+      // Clear prompt and reset retry count
+      setAiPrompt('');
+      setRetryCount(0);
+      setIsRefinement(false);
+    } catch (error: any) {
+      console.error('Generation error:', error);
+      setGenerationStatus({
+        type: 'error',
+        message: 'An unexpected error occurred. Please try again.',
+        errorType: 'unknown',
+        retryable: true,
+        guidance: getErrorGuidance('unknown'),
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Retry generation with the same prompt
+  const handleRetry = () => {
+    handleGenerateComponents(true);
+  };
+
+  // Regenerate with the last successful prompt
+  const handleRegenerate = () => {
+    if (lastSuccessfulPrompt) {
+      setAiPrompt(lastSuccessfulPrompt);
+      setIsRefinement(false);
+      // Use setTimeout to ensure state is updated before generation
+      setTimeout(() => {
+        handleGenerateComponents(false, true);
+      }, 0);
+    }
+  };
+
+  // Handle refinement prompt
+  const handleRefinement = () => {
+    setIsRefinement(true);
+    handleGenerateComponents(false, false);
+  };
+
+  const handleSaveApiKey = () => {
+    if (storeApiKey(apiKeyInput)) {
+      setShowApiKeyModal(false);
+      setApiKeyInput('');
+      // Retry generation if there was a prompt
+      if (aiPrompt.trim()) {
+        handleGenerateComponents();
+      }
+    } else {
+      setGenerationStatus({
+        type: 'error',
+        message: 'Invalid API key format. Please check your OpenAI API key.',
+      });
+    }
+  };
+
   const renderComponent = (comp: PageComponent, isEditable: boolean) => {
     const isSpooky = comp.style?.spooky;
     
@@ -868,6 +1154,24 @@ export default function PageBuilder({ editMode = false, initialData }: PageBuild
           </div>
           <div className={styles.toolbarButtons}>
             <button
+              onClick={() => setAiModeActive(!aiModeActive)}
+              className={aiModeActive ? styles.aiModeButtonActive : styles.aiModeButton}
+              title="AI Mode"
+            >
+              <Sparkles size={14} />
+              <span>ai mode</span>
+            </button>
+            {aiModeActive && (
+              <button
+                onClick={() => setShowConfigPanel(true)}
+                className={styles.configButton}
+                title="AI Settings"
+              >
+                <Settings size={14} />
+                <span>settings</span>
+              </button>
+            )}
+            <button
               onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
               className={styles.themeButton}
             >
@@ -945,6 +1249,175 @@ export default function PageBuilder({ editMode = false, initialData }: PageBuild
           </div>
         </div>
 
+        {aiModeActive && !isPreview && (
+          <div className={styles.aiPromptPanel}>
+            <div className={styles.aiPromptHeader}>
+              <Sparkles size={16} />
+              <span>describe your page</span>
+            </div>
+            <textarea
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              placeholder="E.g., Create a landing page for a coffee shop with a hero section, menu, and contact button..."
+              className={styles.aiPromptInput}
+              rows={4}
+              disabled={isGenerating}
+            />
+            <div className={styles.aiPromptFooter}>
+              <div className={styles.aiPromptInfo}>
+                <span className={styles.characterCount}>
+                  {aiPrompt.length} characters
+                </span>
+                {aiPrompt.trim() && (
+                  <>
+                    <span className={styles.tokenEstimate}>
+                      ~{estimateTokens(aiPrompt)} tokens estimated
+                    </span>
+                    <span className={styles.costEstimate}>
+                      ~{formatCost(estimateCost('gpt-4-turbo', estimateTokens(aiPrompt), estimateTokens(aiPrompt) * 2))} estimated
+                    </span>
+                  </>
+                )}
+              </div>
+              <div className={styles.aiPromptActions}>
+                {generatedComponentIds.length > 0 && generationStatus.type === 'success' && (
+                  <button
+                    onClick={handleRegenerate}
+                    disabled={isGenerating || !lastSuccessfulPrompt}
+                    className={styles.regenerateButton}
+                    title="Regenerate with the same prompt"
+                  >
+                    🔄 Regenerate
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    if (generatedComponentIds.length > 0 && aiPrompt.trim()) {
+                      handleRefinement();
+                    } else {
+                      handleGenerateComponents();
+                    }
+                  }}
+                  disabled={isGenerating || !aiPrompt.trim()}
+                  className={styles.generateButton}
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 size={14} className={styles.spinner} />
+                      <span>generating...</span>
+                    </>
+                  ) : generatedComponentIds.length > 0 && aiPrompt.trim() ? (
+                    <>
+                      <Sparkles size={14} />
+                      <span>refine</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send size={14} />
+                      <span>generate</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+            {generationStatus.type !== 'idle' && (
+              <div className={`${styles.generationStatus} ${styles[generationStatus.type]}`}>
+                <div className={styles.statusMessage}>
+                  {generationStatus.message}
+                  {generationStatus.tokensUsed && (
+                    <span className={styles.tokenInfo}>
+                      {' '}({generationStatus.tokensUsed} tokens used)
+                    </span>
+                  )}
+                </div>
+                {generationStatus.type === 'error' && generationStatus.guidance && (
+                  <div className={styles.errorGuidance}>
+                    💡 {generationStatus.guidance}
+                  </div>
+                )}
+                {generationStatus.type === 'error' && generationStatus.retryable && !isGenerating && rateLimitCooldown === 0 && (
+                  <button
+                    onClick={handleRetry}
+                    className={styles.retryButton}
+                  >
+                    🔄 Retry
+                  </button>
+                )}
+                {generationStatus.type === 'error' && generationStatus.errorType === 'invalid_key' && (
+                  <button
+                    onClick={() => setShowApiKeyModal(true)}
+                    className={styles.retryButton}
+                  >
+                    🔑 Update API Key
+                  </button>
+                )}
+                {rateLimitCooldown > 0 && (
+                  <div className={styles.cooldownTimer}>
+                    ⏱️ Retry available in {rateLimitCooldown}s
+                  </div>
+                )}
+              </div>
+            )}
+            {sessionTokens.total > 0 && (
+              <div className={styles.sessionTracker}>
+                <div className={styles.sessionTrackerHeader}>
+                  <span>📊 Session Usage</span>
+                  <a 
+                    href={getPricingUrl()} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className={styles.pricingLink}
+                  >
+                    View Pricing
+                  </a>
+                </div>
+                <div className={styles.sessionTrackerStats}>
+                  <div className={styles.statItem}>
+                    <span className={styles.statLabel}>Total Tokens:</span>
+                    <span className={styles.statValue}>{sessionTokens.total.toLocaleString()}</span>
+                  </div>
+                  <div className={styles.statItem}>
+                    <span className={styles.statLabel}>Prompt:</span>
+                    <span className={styles.statValue}>{sessionTokens.prompt.toLocaleString()}</span>
+                  </div>
+                  <div className={styles.statItem}>
+                    <span className={styles.statLabel}>Completion:</span>
+                    <span className={styles.statValue}>{sessionTokens.completion.toLocaleString()}</span>
+                  </div>
+                  <div className={styles.statItem}>
+                    <span className={styles.statLabel}>Estimated Cost:</span>
+                    <span className={styles.statValue}>{formatCost(sessionTokens.estimatedCost)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className={styles.examplePrompts}>
+              <span className={styles.exampleLabel}>Examples:</span>
+              <button
+                onClick={() => setAiPrompt('Create a portfolio page with a heading, about me paragraph, and contact button')}
+                className={styles.exampleButton}
+                disabled={isGenerating}
+              >
+                Portfolio page
+              </button>
+              <button
+                onClick={() => setAiPrompt('Build a product landing page with hero heading, feature list, image gallery, and CTA button')}
+                className={styles.exampleButton}
+                disabled={isGenerating}
+              >
+                Landing page
+              </button>
+              <button
+                onClick={() => setAiPrompt('Design a blog post with title, author info, main content paragraphs, and related images')}
+                className={styles.exampleButton}
+                disabled={isGenerating}
+              >
+                Blog post
+              </button>
+            </div>
+          </div>
+        )}
+
         <div 
           className={isPreview ? styles.previewCanvas : styles.canvas}
           style={{
@@ -952,9 +1425,13 @@ export default function PageBuilder({ editMode = false, initialData }: PageBuild
             color: theme === 'dark' ? '#ffffff' : '#000000',
           }}
         >
-          {components.length === 0 && !isPreview ? (
+          {components.length === 0 && !isPreview && !aiModeActive ? (
             <div className={styles.emptyState}>
               Click components on the left to add them to your page
+            </div>
+          ) : components.length === 0 && !isPreview && aiModeActive ? (
+            <div className={styles.emptyState}>
+              Use the AI prompt above to generate components, or click components on the left to add them manually
             </div>
           ) : (
             components.map((comp, index) => (
@@ -1235,6 +1712,184 @@ export default function PageBuilder({ editMode = false, initialData }: PageBuild
                 className={styles.confirmButton}
               >
                 save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showApiKeyModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowApiKeyModal(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.modalTitle}>openai api key required</h3>
+            <div className={styles.publishForm}>
+              <p className={styles.modalText}>
+                To use AI generation, you need to provide your OpenAI API key. 
+                Your key is stored securely in your browser and never sent to our servers.
+              </p>
+              <label className={styles.publishLabel}>OpenAI API Key *</label>
+              <input
+                type="password"
+                value={apiKeyInput}
+                onChange={(e) => setApiKeyInput(e.target.value)}
+                className={styles.publishInput}
+                placeholder="sk-..."
+                autoFocus
+              />
+              <div className={styles.fieldHint}>
+                Get your API key from{' '}
+                <a 
+                  href="https://platform.openai.com/api-keys" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className={styles.link}
+                >
+                  platform.openai.com/api-keys
+                </a>
+              </div>
+            </div>
+            <div className={styles.modalButtons}>
+              <button 
+                onClick={() => {
+                  setShowApiKeyModal(false);
+                  setApiKeyInput('');
+                }} 
+                className={styles.cancelButton}
+              >
+                <X size={14} />
+                <span>cancel</span>
+              </button>
+              <button 
+                onClick={handleSaveApiKey} 
+                className={styles.confirmButton}
+                disabled={!apiKeyInput.trim()}
+              >
+                save key
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showConfigPanel && (
+        <div className={styles.modalOverlay} onClick={() => setShowConfigPanel(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.modalTitle}>ai generation settings</h3>
+            <div className={styles.publishForm}>
+              <label className={styles.publishLabel}>Tone</label>
+              <div className={styles.buttonTypeSelector}>
+                {(['professional', 'casual', 'creative', 'minimal'] as const).map((tone) => (
+                  <button
+                    key={tone}
+                    onClick={() => setGenerationConfig({ ...generationConfig, tone })}
+                    className={generationConfig.tone === tone ? styles.typeSelectorActive : styles.typeSelector}
+                  >
+                    {tone}
+                  </button>
+                ))}
+              </div>
+              <div className={styles.fieldHint}>
+                {generationConfig.tone === 'professional' && 'Business-appropriate language and formal tone'}
+                {generationConfig.tone === 'casual' && 'Friendly, conversational language and relaxed tone'}
+                {generationConfig.tone === 'creative' && 'Imaginative, expressive language with creative flair'}
+                {generationConfig.tone === 'minimal' && 'Concise, minimal language with clean, simple design'}
+              </div>
+
+              <label className={styles.publishLabel}>Theme Preference</label>
+              <div className={styles.buttonTypeSelector}>
+                {(['auto', 'light', 'dark'] as const).map((themePreference) => (
+                  <button
+                    key={themePreference}
+                    onClick={() => setGenerationConfig({ ...generationConfig, themePreference })}
+                    className={generationConfig.themePreference === themePreference ? styles.typeSelectorActive : styles.typeSelector}
+                  >
+                    {themePreference}
+                  </button>
+                ))}
+              </div>
+              <div className={styles.fieldHint}>
+                {generationConfig.themePreference === 'auto' && 'AI will choose colors based on content'}
+                {generationConfig.themePreference === 'light' && 'Dark text on light backgrounds'}
+                {generationConfig.themePreference === 'dark' && 'Light text on dark backgrounds'}
+              </div>
+
+              <label className={styles.publishLabel}>Preferred Components</label>
+              <div className={styles.componentCheckboxGrid}>
+                {AVAILABLE_COMPONENTS.map((comp) => (
+                  <label key={comp.type} className={styles.checkboxLabel}>
+                    <input
+                      type="checkbox"
+                      checked={generationConfig.preferredComponents.includes(comp.type)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setGenerationConfig({
+                            ...generationConfig,
+                            preferredComponents: [...generationConfig.preferredComponents, comp.type],
+                          });
+                        } else {
+                          setGenerationConfig({
+                            ...generationConfig,
+                            preferredComponents: generationConfig.preferredComponents.filter((t) => t !== comp.type),
+                          });
+                        }
+                      }}
+                      className={styles.checkbox}
+                    />
+                    <span>{comp.label.toLowerCase()}</span>
+                  </label>
+                ))}
+              </div>
+              <div className={styles.fieldHint}>
+                Select component types to favor in generation (optional)
+              </div>
+
+              <label className={styles.publishLabel}>Max Components</label>
+              <input
+                type="number"
+                min="1"
+                max="20"
+                value={generationConfig.maxComponents || 8}
+                onChange={(e) => setGenerationConfig({ ...generationConfig, maxComponents: parseInt(e.target.value) || 8 })}
+                className={styles.publishInput}
+              />
+              <div className={styles.fieldHint}>
+                Maximum number of components to generate (1-20)
+              </div>
+
+              <div className={styles.configToggleRow}>
+                <label className={styles.publishLabel}>Include Images</label>
+                <button
+                  onClick={() => setGenerationConfig({ ...generationConfig, includeImages: !generationConfig.includeImages })}
+                  className={generationConfig.includeImages ? styles.toggleButtonActive : styles.toggleButton}
+                >
+                  {generationConfig.includeImages ? 'yes' : 'no'}
+                </button>
+              </div>
+
+              <div className={styles.configToggleRow}>
+                <label className={styles.publishLabel}>Include Buttons</label>
+                <button
+                  onClick={() => setGenerationConfig({ ...generationConfig, includeButtons: !generationConfig.includeButtons })}
+                  className={generationConfig.includeButtons ? styles.toggleButtonActive : styles.toggleButton}
+                >
+                  {generationConfig.includeButtons ? 'yes' : 'no'}
+                </button>
+              </div>
+            </div>
+            <div className={styles.modalButtons}>
+              <button 
+                onClick={() => setShowConfigPanel(false)} 
+                className={styles.cancelButton}
+              >
+                <X size={14} />
+                <span>cancel</span>
+              </button>
+              <button 
+                onClick={() => setShowConfigPanel(false)} 
+                className={styles.confirmButton}
+              >
+                <Settings size={14} />
+                <span>save</span>
               </button>
             </div>
           </div>
