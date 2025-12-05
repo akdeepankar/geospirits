@@ -1,6 +1,8 @@
 .container {
   min-height: 100vh;
   padding: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .navbar {
@@ -154,7 +156,7 @@
 .content {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 2rem 2rem;
+  padding: 0 2rem 8rem;
 }
 
 .component {
