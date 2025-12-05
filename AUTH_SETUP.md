@@ -9,7 +9,7 @@
 ✅ User menu with logout functionality
 ✅ Server and client-side Supabase clients
 
-## Files Created
+## Files Created -
 
 - `app/lib/supabase/client.ts` - Browser client
 - `app/lib/supabase/server.ts` - Server client
